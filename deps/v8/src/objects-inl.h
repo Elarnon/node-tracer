@@ -53,6 +53,7 @@
 #include "src/prototype.h"
 #include "src/transitions-inl.h"
 #include "src/v8memory.h"
+#include "src/log.h"
 
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
@@ -823,6 +824,8 @@ MaybeHandle<Object> Object::ToIndex(Isolate* isolate, Handle<Object> input,
 MaybeHandle<Object> Object::GetProperty(Handle<Object> object,
                                         Handle<Name> name) {
   LookupIterator it(object, name);
+  // V8TRACER get property event log
+  LOG(it.isolate(), GetPropertyEvent(object, name));
   if (!it.IsFound()) return it.factory()->undefined_value();
   return GetProperty(&it);
 }

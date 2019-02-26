@@ -945,7 +945,8 @@ DEFINE_BOOL(sampling_heap_profiler_suppress_randomness, false,
 DEFINE_BOOL(use_idle_notification, true,
             "Use idle notification to reduce memory footprint.")
 // ic.cc
-DEFINE_BOOL(use_ic, true, "use inline caching")
+// V8TRACER Disable the use of inline caches
+DEFINE_BOOL(use_ic, false, "use inline caching")
 DEFINE_BOOL(trace_ic, false,
             "trace inline cache state transitions for tools/ic-processor")
 DEFINE_IMPLICATION(trace_ic, log_code)
@@ -1196,15 +1197,16 @@ DEFINE_DEBUG_BOOL(trace_wasm_instances, false,
 #define FLAG FLAG_FULL
 
 // log.cc
-DEFINE_BOOL(log, false,
+// V8TRACER enable the log, log_all and log_source_code by default
+DEFINE_BOOL(log, true,
             "Minimal logging (no API, code, GC, suspect, or handles samples).")
-DEFINE_BOOL(log_all, false, "Log all events to the log file.")
+DEFINE_BOOL(log_all, true, "Log all events to the log file.")
 DEFINE_BOOL(log_api, false, "Log API events to the log file.")
 DEFINE_BOOL(log_code, false,
             "Log code events to the log file without profiling.")
 DEFINE_BOOL(log_handles, false, "Log global handle events.")
 DEFINE_BOOL(log_suspect, false, "Log suspect operations.")
-DEFINE_BOOL(log_source_code, false, "Log source code.")
+DEFINE_BOOL(log_source_code, true, "Log source code.")
 DEFINE_BOOL(log_function_events, false,
             "Log function events "
             "(parse, compile, execute) separately.")

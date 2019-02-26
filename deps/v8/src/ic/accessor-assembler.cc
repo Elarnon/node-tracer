@@ -3214,8 +3214,11 @@ void AccessorAssembler::GenerateLoadIC_Uninitialized() {
   Node* vector = Parameter(Descriptor::kVector);
   Node* context = Parameter(Descriptor::kContext);
 
-  LoadICParameters p(context, receiver, name, slot, vector);
-  LoadIC_Uninitialized(&p);
+  // V8TRACER uninitialized cache IC patch so that we can observe it in get property
+  TailCallRuntime(Runtime::kGetProperty, context, receiver, name);
+  
+  //LoadICParameters p(context, receiver, name, slot, vector);
+  //LoadIC_Uninitialized(&p);
 }
 
 void AccessorAssembler::GenerateLoadICTrampoline() {

@@ -37,6 +37,14 @@
 #include "src/utils.h"
 #include "src/version.h"
 
+
+// V8TRACER Added headers
+#include "src/profiler/heap-snapshot-generator.h"
+#include "src/profiler/heap-snapshot-generator-inl.h"
+#include "src/objects/name.h"
+#include "src/frames-inl.h"
+
+
 namespace v8 {
 namespace internal {
 
@@ -1095,6 +1103,259 @@ void Logger::CurrentTimeEvent() {
   msg << "current-time" << kNext << timer_.Elapsed().InMicroseconds();
   msg.WriteToLogFile();
 }
+
+    bool NewAddress(SnapshotObjectId addr, bool makeNew = false) {
+        static std::unordered_set<SnapshotObjectId> processed;
+        auto i = processed.find(addr);
+        if (i == processed.end()) {
+            // process the address
+            if (!makeNew)
+                processed.insert(addr);
+            return true;
+        } else {
+            if (makeNew)
+                processed.erase(i);
+            return false;
+        }
+    }
+
+    SnapshotObjectId GetAddressId(Address addr, size_t size) {
+        HeapProfiler * hp = Isolate::Current()->heap_profiler();
+        if (! hp->is_tracking_object_moves()) 
+            hp->StartHeapObjectsTracking(/* trackAllocations = */ true);
+        SnapshotObjectId id = hp->heap_object_map()->FindEntry(addr);
+        if (id == 0) {
+            id = hp->heap_object_map()->FindOrAddEntry(addr, size);
+            NewAddress(id, true);
+        }
+        return id;
+    }
+
+    SnapshotObjectId GetAddressId(Handle<HeapObject> obj) {
+        return GetAddressId(obj->address(), obj->Size());
+    }
+
+    SnapshotObjectId GetAddressId(HeapObject * obj) {
+        return GetAddressId(obj->address(), obj->Size());
+    }
+    
+    /** Converts given object into a unique id that is used in the log reports. If the object is not HeapObject, returns 0.
+     */
+    SnapshotObjectId HeapObjectToId(Handle<HeapObject> obj, bool & isFirstOccurence) {
+        //Isolate::Current()->heap()->AddHeapObjectAllocationTracker(new MyHeapTracker());
+        HeapProfiler * hp = Isolate::Current()->heap_profiler();
+        if (! hp->is_tracking_object_moves()) {
+            std::ostringstream s;
+            s << ((size_t) hp);
+            LOG(Isolate::Current(), StringEvent("heap-tracking-start", s.str().c_str()));
+            hp->StartHeapObjectsTracking(/* trackAllocations = */ true);
+        } 
+        SnapshotObjectId id = hp->heap_object_map()->FindEntry(Address(obj->address()));
+        if (id != 0) {
+            isFirstOccurence = false;
+        } else {
+            isFirstOccurence = true;
+            id = hp->heap_object_map()->FindOrAddEntry(Address(obj->address()), obj->Size());
+        }
+        return id;
+    } 
+
+    SnapshotObjectId MapToId(Map * map, bool & isFirstOccurence) {
+        HeapProfiler * hp = Isolate::Current()->heap_profiler();
+        /*        if (! hp->is_tracking_object_moves()) {
+            std::ostringstream s;
+            s << ((size_t) hp);
+            LOG(Isolate::Current(), StringEvent("heap-tracking-start", s.str().c_str()));
+            hp->StartHeapObjectsTracking(/ * trackAllocations = * / false);
+        } */
+        SnapshotObjectId id = hp->heap_object_map()->FindEntry(Address(map->address()));
+        if (id != 0) {
+            isFirstOccurence = false;
+        } else {
+            isFirstOccurence = true;
+            id = hp->heap_object_map()->FindOrAddEntry(Address(map), map->Size());
+        }
+        return id;
+    }
+    
+    bool RegisterObjectMap(SnapshotObjectId object, SnapshotObjectId map) {
+        static std::unordered_map<SnapshotObjectId, SnapshotObjectId> map_;
+        auto i = map_.find(object);
+        if (i == map_.end()) {
+            map_[object] = map;
+            return true;
+        } else if (i->second != map) {
+            i->second = map;
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
+
+    /** Prints property name, which can be either a string, or a symbol.
+     */
+    void PrintName(Log::MessageBuilder & msg, Object * name) {
+        std::ostringstream buffer;
+        if (name->IsString()) {
+            String * s = String::cast(name);
+            if (!s->HasOnlyOneByteChars())
+                msg << "u";
+            if (StringShape(s).IsInternalized())
+                msg << "#\"";
+            else if (StringShape(s).IsCons())
+                msg << "c\"";
+            else if (StringShape(s).IsThin())
+                msg << ">\"";
+            else
+                msg << "\"";
+            // TODO deal with " in the strings
+            for(int i = 0, e = s->length(); i != e; ++i) {
+                auto c = AsUC16(s->Get(i));
+                if (c.value == '"' || c.value == '\\')
+                    msg << "\\";
+                msg << c;
+            }
+            msg << "\"";
+        } else {
+            msg <<"!UNSUPPORTED_NAME_TYPE!";
+        }
+        //        name->NamePrint(buffer);
+        msg << buffer.str();
+    }
+
+   /** Prints the location of current stack frame into the given log message.
+    */
+    void PrintLocation(Log::MessageBuilder & msg) {
+        Isolate * i = Isolate::Current();
+        for (StackTraceFrameIterator it(i); !it.done(); it.Advance()) {
+            // ignore non-js frames
+            if (!it.is_javascript())
+                continue;
+            HandleScope scope(i);
+            JavaScriptFrame* frame = it.javascript_frame();
+            Handle<Object> receiver(frame->receiver(), i);
+            Handle<JSFunction> function(frame->function(), i);
+            Handle<AbstractCode> code;
+            int offset;
+            if (frame->is_interpreted()) {
+                InterpretedFrame* iframe = InterpretedFrame::cast(frame);
+                code = handle(AbstractCode::cast(iframe->GetBytecodeArray()), i);
+                offset = iframe->GetBytecodeOffset();
+            } else {
+                code = handle(AbstractCode::cast(frame->LookupCode()), i);
+                offset = static_cast<int>(frame->pc() - code->InstructionStart());
+            }
+
+            // get the site, from which we can get the source code references
+            JSStackFrame site(i, receiver, function, code, offset);
+            Handle<Object> filename = site.GetScriptNameOrSourceUrl();
+            PrintName(msg, *filename);
+            msg << ":" << site.GetLineNumber();
+            return;
+        } 
+        msg << "native:0";
+    } 
+
+    void Logger::MapChangeEvent(Handle<HeapObject> object, SnapshotObjectId id, SnapshotObjectId mapId) {
+        //        if (! RegisterObjectMap(id, mapId))
+        //    return;
+        DisallowHeapAllocation no_gc;
+        Log::MessageBuilder msg(log_);
+        msg << "map-change" << kNext << mapId << kNext;
+        // instance type
+        msg << object->map()->instance_type() << kNext;
+        // element's kind
+        msg << object->map()->elements_kind() << kNext;
+        // descriptors
+        //        object->map()->PrintMapDetails(buffer);
+        DescriptorArray * da = object->map()->instance_descriptors();
+        int numFields = da->number_of_descriptors();
+        msg << numFields;
+        for (int i = 0; i != numFields; ++i) {
+            msg << kNext;
+            PrintName(msg, da->GetKey(i));
+            PropertyDetails details = da->GetDetails(i);
+            msg << ":" << details.representation().Mnemonic();
+        }
+        // now print stuff about the 
+        msg.WriteToLogFile();
+    }
+
+    void Logger::GetPropertyEvent(Handle<Object> target, Handle<Name> key) {
+        if (FLAG_predictable || ! log_->IsEnabled() || ! target->IsHeapObject())
+            return;
+        Handle<HeapObject> obj = Handle<HeapObject>::cast(target);
+        SnapshotObjectId id = GetAddressId(obj);
+        SnapshotObjectId mapId = GetAddressId(obj->map());
+        if (NewAddress(mapId))
+            MapChangeEvent(obj, id, mapId);
+        Log::MessageBuilder msg(log_);
+        msg << "get-property" << kNext << id << kNext << mapId << kNext;
+        PrintName(msg, *key);
+        msg << kNext;
+        PrintLocation(msg);
+        msg.WriteToLogFile();
+    }
+
+     /**
+     */
+    void Logger::GetElementEvent(Handle<Object> target, uint32_t index) {
+        if (FLAG_predictable || ! log_->IsEnabled() || ! target->IsHeapObject())
+            return;
+        Handle<HeapObject> obj = Handle<HeapObject>::cast(target);
+        SnapshotObjectId id = GetAddressId(obj);
+        SnapshotObjectId mapId = GetAddressId(obj->map());
+        if (NewAddress(mapId))
+            MapChangeEvent(obj, id, mapId);
+        Log::MessageBuilder msg(log_);
+        msg << "get-element" << kNext << id << kNext << mapId << kNext << index << kNext;
+        PrintLocation(msg);
+        msg.WriteToLogFile();
+    }
+
+    void Logger::SetPropertyEvent(Handle<Object> target, Handle<Name> key) {
+        if (FLAG_predictable || ! log_->IsEnabled() || ! target->IsHeapObject())
+            return;
+        Handle<HeapObject> obj = Handle<HeapObject>::cast(target);
+        SnapshotObjectId id = GetAddressId(obj);
+        SnapshotObjectId mapId = GetAddressId(obj->map());
+        if (NewAddress(mapId))
+            MapChangeEvent(obj, id, mapId);
+        Log::MessageBuilder msg(log_);
+        msg << "set-property" << kNext << id << kNext << mapId << kNext;
+        PrintName(msg, *key);
+        msg << kNext;
+        PrintLocation(msg);
+        msg.WriteToLogFile();
+    }
+
+    /**
+     */
+    void Logger::SetElementEvent(Handle<Object> target, uint32_t index) {
+        if (FLAG_predictable || ! log_->IsEnabled() || ! target->IsHeapObject())
+            return;
+        Handle<HeapObject> obj = Handle<HeapObject>::cast(target);
+        SnapshotObjectId id = GetAddressId(obj);
+        SnapshotObjectId mapId = GetAddressId(obj->map());
+        if (NewAddress(mapId))
+            MapChangeEvent(obj, id, mapId);
+        Log::MessageBuilder msg(log_);
+        msg << "set-element" << kNext << id << kNext << mapId << kNext << index << kNext;
+        PrintLocation(msg);
+        msg.WriteToLogFile();
+    }
+
+    void Logger::AllocationEvent(Address addr, size_t size) {
+        if (FLAG_predictable || ! log_->IsEnabled())
+            return;
+        SnapshotObjectId id = GetAddressId(addr, size);
+        NewAddress(id, true);
+        Log::MessageBuilder msg(log_);
+        msg << "allocation-event" << kNext << id << kNext << size;
+        msg.WriteToLogFile();
+    }
+    
 
 
 void Logger::TimerEvent(Logger::StartEnd se, const char* name) {

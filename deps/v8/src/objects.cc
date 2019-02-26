@@ -1005,6 +1005,11 @@ Maybe<bool> JSReceiver::HasOwnProperty(Handle<JSReceiver> object,
 
 // static
 MaybeHandle<Object> Object::GetProperty(LookupIterator* it) {
+  // V8TRACER get element or property events
+  if (it->IsElement())
+    LOG(it->isolate(), GetElementEvent(it->GetReceiver(), it->index()));
+  else
+    LOG(it->isolate(), GetPropertyEvent(it->GetReceiver(), it->GetName()));
   for (; it->IsFound(); it->Next()) {
     switch (it->state()) {
       case LookupIterator::NOT_FOUND:
@@ -4900,6 +4905,11 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
 Maybe<bool> Object::SetProperty(LookupIterator* it, Handle<Object> value,
                                 LanguageMode language_mode,
                                 StoreFromKeyed store_mode) {
+  // V8TRACER set element or property events
+  if (it->IsElement())
+    LOG(it->isolate(), SetElementEvent(it->GetReceiver(), it->index()));
+  else
+    LOG(it->isolate(), SetPropertyEvent(it->GetReceiver(), it->GetName()));
   if (it->IsFound()) {
     bool found = true;
     Maybe<bool> result =
