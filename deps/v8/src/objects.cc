@@ -4907,9 +4907,9 @@ Maybe<bool> Object::SetProperty(LookupIterator* it, Handle<Object> value,
                                 StoreFromKeyed store_mode) {
   // V8TRACER set element or property events
   if (it->IsElement())
-    LOG(it->isolate(), SetElementEvent(it->GetReceiver(), it->index()));
+    LOG(it->isolate(), SetElementEvent(it->GetReceiver(), it->index(), value));
   else
-    LOG(it->isolate(), SetPropertyEvent(it->GetReceiver(), it->GetName()));
+    LOG(it->isolate(), SetPropertyEvent(it->GetReceiver(), it->GetName(), value));
   if (it->IsFound()) {
     bool found = true;
     Maybe<bool> result =

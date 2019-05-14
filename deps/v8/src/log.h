@@ -241,14 +241,16 @@ class Logger : public CodeEventListener {
 
   // V8TRACER tracer function declarations
   // pretty printing map information, if we want to
-  void MapChangeEvent(Handle<HeapObject> target, SnapshotObjectId id, SnapshotObjectId mapId);
+  void MapChangeEvent(Handle<HeapObject> target, SnapshotObjectId id,
+                      SnapshotObjectId mapId);
   // Getting and setting object properties
   void GetPropertyEvent(Handle<Object> target, Handle<Name> key);
   void GetElementEvent(Handle<Object> target, uint32_t index);
-  void SetPropertyEvent(Handle<Object> target, Handle<Name> key);
-  void SetElementEvent(Handle<Object> target, uint32_t index);
+  void SetPropertyEvent(Handle<Object> target, Handle<Name> key,
+                        Handle<Object> value);
+  void SetElementEvent(Handle<Object> target, uint32_t index,
+                       Handle<Object> value);
   void AllocationEvent(Address addr, size_t size);
-  
 
   V8_EXPORT_PRIVATE void TimerEvent(StartEnd se, const char* name);
 
