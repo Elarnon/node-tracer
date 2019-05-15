@@ -1235,6 +1235,15 @@ void Logger::MapChangeEvent(Handle<HeapObject> object, SnapshotObjectId id,
   DisallowHeapAllocation no_gc;
   Log::MessageBuilder msg(log_);
   msg << "map-change" << kNext << mapId << kNext;
+  // prototype
+  Object* prototype = object->map()->prototype();
+  // Objects with a `null` prototype can be created through `Object.create`.
+  if (prototype->IsSmi()) {
+    msg << "smi(" << Smi::cast(prototype) << ")" << kNext;
+  } else {
+    DCHECK(object->map()->prototype()->IsHeapObject());
+    msg << GetAddressId(HeapObject::cast(prototype)) << kNext;
+  }
   // instance type
   msg << object->map()->instance_type() << kNext;
   // element's kind
