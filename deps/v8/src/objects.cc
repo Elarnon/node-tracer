@@ -4905,11 +4905,10 @@ Maybe<bool> Object::SetPropertyInternal(LookupIterator* it,
 Maybe<bool> Object::SetProperty(LookupIterator* it, Handle<Object> value,
                                 LanguageMode language_mode,
                                 StoreFromKeyed store_mode) {
-  // V8TRACER set element or property events
-  if (it->IsElement())
-    LOG(it->isolate(), SetElementEvent(it->GetReceiver(), it->index(), value));
-  else
-    LOG(it->isolate(), SetPropertyEvent(it->GetReceiver(), it->GetName(), value));
+  if (FLAG_offline_tracer) {
+    LOG(it->isolate(), SetLookupEvent(it, value));
+  }
+
   if (it->IsFound()) {
     bool found = true;
     Maybe<bool> result =
@@ -4936,6 +4935,10 @@ Maybe<bool> Object::SetSuperProperty(LookupIterator* it, Handle<Object> value,
                                      LanguageMode language_mode,
                                      StoreFromKeyed store_mode) {
   Isolate* isolate = it->isolate();
+
+  if (FLAG_offline_tracer) {
+    LOG(isolate, SetLookupEvent(it, value));
+  }
 
   if (it->IsFound()) {
     bool found = true;
@@ -6039,6 +6042,10 @@ void JSObject::AddProperty(Handle<JSObject> object, Handle<Name> name,
   DCHECK(!it.IsFound());
   DCHECK(object->map()->is_extensible() || name->IsPrivate());
 #endif
+  if (FLAG_offline_tracer) {
+    LOG(it.isolate(), SetLookupEvent(&it, value));
+  }
+
   CHECK(AddDataProperty(&it, value, attributes, kThrowOnError,
                         CERTAINLY_NOT_STORE_FROM_KEYED)
             .IsJust());
@@ -6061,6 +6068,10 @@ MaybeHandle<Object> JSObject::DefineOwnPropertyIgnoreAttributes(
 Maybe<bool> JSObject::DefineOwnPropertyIgnoreAttributes(
     LookupIterator* it, Handle<Object> value, PropertyAttributes attributes,
     ShouldThrow should_throw, AccessorInfoHandling handling) {
+  if (FLAG_offline_tracer) {
+    LOG(it->isolate(), SetLookupEvent(it, value));
+  }
+
   it->UpdateProtector();
   Handle<JSObject> object = Handle<JSObject>::cast(it->GetReceiver());
 

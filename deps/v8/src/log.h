@@ -248,6 +248,7 @@ class Logger : public CodeEventListener {
   void GetElementEvent(Handle<Object> target, uint32_t index);
   void SetPropertyEvent(Handle<Object> target, Handle<Name> key,
                         Handle<Object> value);
+  void SetLookupEvent(LookupIterator *it, Handle<Object> value);
   void SetElementEvent(Handle<Object> target, uint32_t index,
                        Handle<Object> value);
   void AllocationEvent(Address addr, size_t size);

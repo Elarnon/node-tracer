@@ -228,6 +228,11 @@ bool AddElement(Handle<JSArray> array, int index,
       false);
 
   JSObject::AddProperty(element, factory->value_string(), value, NONE);
+
+  if (FLAG_offline_tracer) {
+    LOG(isolate, SetElementEvent(array, index, element));
+  }
+
   RETURN_ON_EXCEPTION_VALUE(
       isolate, JSObject::AddDataElement(array, index, element, NONE), false);
   return true;

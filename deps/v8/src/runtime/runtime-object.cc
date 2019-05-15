@@ -1257,6 +1257,10 @@ RUNTIME_FUNCTION(Runtime_AddPrivateField) {
         isolate, NewTypeError(MessageTemplate::kVarRedeclaration, key));
   }
 
+  if (FLAG_offline_tracer) {
+    LOG(isolate, SetLookupEvent(&it, value));
+  }
+
   CHECK(Object::AddDataProperty(&it, value, NONE, kDontThrow,
                                 Object::MAY_BE_STORE_FROM_KEYED)
             .FromJust());

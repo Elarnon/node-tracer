@@ -1281,6 +1281,14 @@ void Logger::GetElementEvent(Handle<Object> target, uint32_t index) {
   msg.WriteToLogFile();
 }
 
+void Logger::SetLookupEvent(LookupIterator *it, Handle<Object> value) {
+  if (it->IsElement()) {
+    SetElementEvent(it->GetReceiver(), it->index(), value);
+  } else {
+    SetPropertyEvent(it->GetReceiver(), it->GetName(), value);
+  }
+}
+
 void Logger::SetPropertyEvent(Handle<Object> target, Handle<Name> key,
                               Handle<Object> value) {
   if (FLAG_predictable || !log_->IsEnabled() || !target->IsHeapObject()) return;

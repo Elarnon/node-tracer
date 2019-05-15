@@ -114,6 +114,10 @@ MaybeHandle<Object> DefineDataProperty(Isolate* isolate,
   }
 #endif
 
+  if (FLAG_offline_tracer) {
+    LOG(isolate, SetLookupEvent(&it, value));
+  }
+
   MAYBE_RETURN_NULL(
       Object::AddDataProperty(&it, value, attributes, kThrowOnError,
                               Object::CERTAINLY_NOT_STORE_FROM_KEYED));
