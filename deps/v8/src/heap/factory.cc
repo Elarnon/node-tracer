@@ -2835,7 +2835,35 @@ Handle<JSArray> Factory::NewJSArrayWithElements(Handle<FixedArrayBase> elements,
 
   array->set_elements(*elements);
   array->set_length(Smi::FromInt(length));
+
   JSObject::ValidateElements(*array);
+
+  if (FLAG_offline_tracer) {
+    // Need to log the stored elements!
+    if (elements->IsFixedArray()) {
+      FixedArray *fixed_array = FixedArray::cast(*elements);
+      for (int i = 0; i < fixed_array->length(); ++i) {
+        // TODO: We may probably get away without the handle with
+        // DisallowHeapAllocation
+        Handle<Object> element = Handle<Object>(fixed_array->get(i), isolate());
+        if (element->IsTheHole(isolate())) {
+          continue;
+        } else {
+          LOG(isolate(), SetElementEvent(array, i, element));
+        }
+      }
+    } else if (elements->IsFixedDoubleArray()) {
+      // TODO: SetElementEvent with double values
+    } else if (elements->IsFixedTypedArrayBase()) {
+      // V8TRACER: Not clear how to log stores into TypedArrays... Let's ignore
+      // them for now.
+    } else {
+      // V8TRACER: These only hapen in SourcePositionTableWithFrameCache, as
+      // far as I can see, so we probably don't care about them.
+      CHECK(elements->IsByteArray());
+    }
+  }
+
   return array;
 }
 

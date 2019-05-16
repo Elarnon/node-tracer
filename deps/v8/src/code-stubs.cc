@@ -286,7 +286,7 @@ TF_STUB(ElementsTransitionAndStoreStub, CodeStubAssembler) {
 
   Label miss(this);
 
-  if (FLAG_trace_elements_transitions) {
+  if (FLAG_offline_tracer || FLAG_trace_elements_transitions) {
     // Tracing elements transitions is the job of the runtime.
     Goto(&miss);
   } else {
@@ -354,8 +354,12 @@ TF_STUB(KeyedStoreSloppyArgumentsStub, CodeStubAssembler) {
 
   Label miss(this);
 
-  StoreKeyedSloppyArguments(receiver, key, value, &miss);
-  Return(value);
+  if (FLAG_offline_tracer) {
+    Goto(&miss);
+  } else {
+    StoreKeyedSloppyArguments(receiver, key, value, &miss);
+    Return(value);
+  }
 
   BIND(&miss);
   {
@@ -437,9 +441,13 @@ TF_STUB(StoreFastElementStub, CodeStubAssembler) {
 
   Label miss(this);
 
-  EmitElementStore(receiver, key, value, stub->is_js_array(),
-                   stub->elements_kind(), stub->store_mode(), &miss, context);
-  Return(value);
+  if (FLAG_offline_tracer) {
+    Goto(&miss);
+  } else {
+    EmitElementStore(receiver, key, value, stub->is_js_array(),
+                     stub->elements_kind(), stub->store_mode(), &miss, context);
+    Return(value);
+  }
 
   BIND(&miss);
   {

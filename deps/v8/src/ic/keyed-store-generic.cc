@@ -959,20 +959,24 @@ void KeyedStoreGenericAssembler::StoreIC_Uninitialized() {
 
   Label miss(this);
 
-  GotoIf(TaggedIsSmi(receiver), &miss);
-  Node* receiver_map = LoadMap(receiver);
-  TNode<Int32T> instance_type = LoadMapInstanceType(receiver_map);
-  // Receivers requiring non-standard element accesses (interceptors, access
-  // checks, strings and string wrappers, proxies) are handled in the runtime.
-  GotoIf(IsSpecialReceiverInstanceType(instance_type), &miss);
+  if (FLAG_offline_tracer) {
+    Goto(&miss);
+  } else {
+    GotoIf(TaggedIsSmi(receiver), &miss);
+    Node* receiver_map = LoadMap(receiver);
+    TNode<Int32T> instance_type = LoadMapInstanceType(receiver_map);
+    // Receivers requiring non-standard element accesses (interceptors, access
+    // checks, strings and string wrappers, proxies) are handled in the runtime.
+    GotoIf(IsSpecialReceiverInstanceType(instance_type), &miss);
 
-  // Optimistically write the state transition to the vector.
-  StoreFeedbackVectorSlot(vector, slot,
-                          LoadRoot(Heap::kpremonomorphic_symbolRootIndex),
-                          SKIP_WRITE_BARRIER, 0, SMI_PARAMETERS);
+    // Optimistically write the state transition to the vector.
+    StoreFeedbackVectorSlot(vector, slot,
+                            LoadRoot(Heap::kpremonomorphic_symbolRootIndex),
+                            SKIP_WRITE_BARRIER, 0, SMI_PARAMETERS);
 
-  StoreICParameters p(context, receiver, name, value, slot, vector);
-  EmitGenericPropertyStore(receiver, receiver_map, &p, &miss);
+    StoreICParameters p(context, receiver, name, value, slot, vector);
+    EmitGenericPropertyStore(receiver, receiver_map, &p, &miss);
+  }
 
   BIND(&miss);
   {
