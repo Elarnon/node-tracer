@@ -2839,12 +2839,17 @@ Handle<JSArray> Factory::NewJSArrayWithElements(Handle<FixedArrayBase> elements,
   JSObject::ValidateElements(*array);
 
   if (FLAG_offline_tracer) {
+    // TODO(v8tracer): This makes V8 crash with errors about global handles not
+    // being serialized.  Not sure what this is about, but let's skip the
+    // length field for now.
+    // LOG(isolate(), SetLengthEvent(array, length));
+
     // Need to log the stored elements!
     if (elements->IsFixedArray()) {
       FixedArray *fixed_array = FixedArray::cast(*elements);
       for (int i = 0; i < fixed_array->length(); ++i) {
-        // TODO: We may probably get away without the handle with
-        // DisallowHeapAllocation
+        // TODO(v8tracer): We may probably get away without the handle?  Not
+        // sure if garbage collection or some such could occur here.
         Handle<Object> element = Handle<Object>(fixed_array->get(i), isolate());
         if (element->IsTheHole(isolate())) {
           continue;
@@ -2853,13 +2858,20 @@ Handle<JSArray> Factory::NewJSArrayWithElements(Handle<FixedArrayBase> elements,
         }
       }
     } else if (elements->IsFixedDoubleArray()) {
-      // TODO: SetElementEvent with double values
+      FixedDoubleArray *fixed_array = FixedDoubleArray::cast(*elements);
+      for (int i = 0; i < fixed_array->length(); ++i) {
+        if (fixed_array->is_the_hole(i)) {
+          continue;
+        } else {
+          LOG(isolate(), SetElementEvent(array, i, fixed_array->get_scalar(i)));
+        }
+      }
     } else if (elements->IsFixedTypedArrayBase()) {
-      // V8TRACER: Not clear how to log stores into TypedArrays... Let's ignore
-      // them for now.
+      // TODO(v8tracer): Not clear how to log stores into TypedArrays... it
+      // looks like we don't capture regular load/stores to them anyways.
     } else {
-      // V8TRACER: These only hapen in SourcePositionTableWithFrameCache, as
-      // far as I can see, so we probably don't care about them.
+      // TODO(v8tracer): These only hapen in SourcePositionTableWithFrameCache,
+      // as far as I can see, so we probably don't care about them.
       CHECK(elements->IsByteArray());
     }
   }

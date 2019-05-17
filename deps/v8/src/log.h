@@ -253,6 +253,10 @@ class Logger : public CodeEventListener {
                        Handle<Object> value);
   void AllocationEvent(Address addr, size_t size);
 
+  // Used when setting values into an unboxed array
+  void SetElementEvent(Handle<JSArray> target, uint32_t index, double scalar);
+  void SetLengthEvent(Handle<JSArray> target, int length);
+
   V8_EXPORT_PRIVATE void TimerEvent(StartEnd se, const char* name);
 
   static void EnterExternal(Isolate* isolate);

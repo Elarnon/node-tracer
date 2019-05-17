@@ -187,8 +187,9 @@ void HeapProfiler::ObjectMoveEvent(Address from, Address to, int size) {
 
 void HeapProfiler::AllocationEvent(Address addr, int size) {
   DisallowHeapAllocation no_allocation;
-  // V8TRACER allocation event
-  LOG(Isolate::Current(), AllocationEvent(addr, size));
+  if (FLAG_offline_tracer) {
+    LOG(Isolate::Current(), AllocationEvent(addr, size));
+  }
   if (allocation_tracker_) {
     allocation_tracker_->AllocationEvent(addr, size);
   }

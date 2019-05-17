@@ -1313,6 +1313,8 @@ void Logger::SetPropertyEvent(Handle<Object> target, Handle<Name> key,
     std::ostringstream os;
     value->ShortPrint(os);
     msg << os.str() << ")" << kNext;
+  } else if (value->IsHeapNumber()) {
+    msg << "number(" << HeapNumber::cast(*value)->value() << ")" << kNext;
   } else {
     DCHECK(value->IsHeapObject());
     msg << GetAddressId(HeapObject::cast(*value)) << kNext;
@@ -1338,10 +1340,32 @@ void Logger::SetElementEvent(Handle<Object> target, uint32_t index,
     std::ostringstream os;
     value->ShortPrint(os);
     msg << os.str() << ")" << kNext;
+  } else if (value->IsHeapNumber()) {
+    msg << "number(" << HeapNumber::cast(*value)->value() << ")" << kNext;
   } else {
     DCHECK(value->IsHeapObject());
     msg << GetAddressId(HeapObject::cast(*value)) << kNext;
   }
+  PrintLocation(msg);
+  msg.WriteToLogFile();
+}
+
+void Logger::SetElementEvent(Handle<JSArray> target, uint32_t index, double scalar) {
+  SnapshotObjectId id = GetAddressId(target);
+  SnapshotObjectId mapId = GetAddressId(target->map());
+  if (NewAddress(mapId)) MapChangeEvent(target, id, mapId);
+  Log::MessageBuilder msg(log_);
+  msg << "set-element" << kNext << id << kNext << mapId << kNext << index << kNext << "number(" << scalar << ")" << kNext;
+  PrintLocation(msg);
+  msg.WriteToLogFile();
+}
+
+void Logger::SetLengthEvent(Handle<JSArray> target, int length) {
+  SnapshotObjectId id = GetAddressId(target);
+  SnapshotObjectId mapId = GetAddressId(target->map());
+  if (NewAddress(mapId)) MapChangeEvent(target, id, mapId);
+  Log::MessageBuilder msg(log_);
+  msg << "set-property" << kNext << id << kNext << mapId << kNext << "length" << kNext << "smi(" << length << ")" << kNext;
   PrintLocation(msg);
   msg.WriteToLogFile();
 }

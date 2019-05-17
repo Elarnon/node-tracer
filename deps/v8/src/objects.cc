@@ -1005,11 +1005,14 @@ Maybe<bool> JSReceiver::HasOwnProperty(Handle<JSReceiver> object,
 
 // static
 MaybeHandle<Object> Object::GetProperty(LookupIterator* it) {
-  // V8TRACER get element or property events
-  if (it->IsElement())
-    LOG(it->isolate(), GetElementEvent(it->GetReceiver(), it->index()));
-  else
-    LOG(it->isolate(), GetPropertyEvent(it->GetReceiver(), it->GetName()));
+  if (FLAG_offline_tracer) {
+    if (it->IsElement()) {
+      LOG(it->isolate(), GetElementEvent(it->GetReceiver(), it->index()));
+    } else {
+      LOG(it->isolate(), GetPropertyEvent(it->GetReceiver(), it->GetName()));
+    }
+  }
+
   for (; it->IsFound(); it->Next()) {
     switch (it->state()) {
       case LookupIterator::NOT_FOUND:

@@ -175,7 +175,7 @@ void Log::MessageBuilder::AppendCharacter(char c) {
       // Escape commas (log field separator) directly.
       os << "\\x2C";
     } else if (c == '\\') {
-      // Escape the escape character to avoid confusions when reading.
+      // v8tracer: Escape the escape character to avoid confusions when reading.
       os << "\\\\";
     } else {
       // Directly append any printable ascii character.
