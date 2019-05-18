@@ -1232,7 +1232,8 @@ KeyedAccessLoadMode GetLoadMode(Handle<Object> receiver, uint32_t index) {
 
 MaybeHandle<Object> KeyedLoadIC::Load(Handle<Object> object,
                                       Handle<Object> key) {
-  if (MigrateDeprecated(object)) {
+  // TODO(v8tracer): Somehow log that this is a keyed load.
+  if (FLAG_offline_tracer || MigrateDeprecated(object)) {
     Handle<Object> result;
     ASSIGN_RETURN_ON_EXCEPTION(
         isolate(), result, Runtime::GetObjectProperty(isolate(), object, key),
@@ -1998,6 +1999,7 @@ MaybeHandle<Object> KeyedStoreIC::Store(Handle<Object> object,
                                         Handle<Object> value) {
   // TODO(verwaest): Let SetProperty do the migration, since storing a property
   // might deprecate the current map again, if value does not fit.
+  // TODO(v8tracer): Log that this is a keyed store.
   if (FLAG_offline_tracer || MigrateDeprecated(object)) {
     Handle<Object> result;
     ASSIGN_RETURN_ON_EXCEPTION(
