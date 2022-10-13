@@ -2400,6 +2400,7 @@ Node* CodeStubAssembler::StoreObjectFieldNoWriteBarrier(
 
 Node* CodeStubAssembler::StoreMap(Node* object, Node* map) {
   CSA_SLOW_ASSERT(this, IsMap(map));
+  // V8TRACER(SET_MAP)
   return StoreWithMapWriteBarrier(
       object, IntPtrConstant(HeapObject::kMapOffset - kHeapObjectTag), map);
 }
@@ -2411,6 +2412,7 @@ Node* CodeStubAssembler::StoreMapNoWriteBarrier(
 
 Node* CodeStubAssembler::StoreMapNoWriteBarrier(Node* object, Node* map) {
   CSA_SLOW_ASSERT(this, IsMap(map));
+  // V8TRACER(SET_MAP)
   return StoreNoWriteBarrier(
       MachineRepresentation::kTagged, object,
       IntPtrConstant(HeapObject::kMapOffset - kHeapObjectTag), map);

@@ -1219,6 +1219,7 @@ DEFINE_IMPLICATION(offline_tracer, log_all)
 DEFINE_IMPLICATION(offline_tracer, log_source_code)
 DEFINE_IMPLICATION(offline_tracer, trace_maps)
 DEFINE_NEG_IMPLICATION(offline_tracer, use_ic)
+// DEFINE_NEG_IMPLICATION(offline_tracer, inline_new)
 
 #if defined(ANDROID)
 // Phones and tablets have processors that are much slower than desktop

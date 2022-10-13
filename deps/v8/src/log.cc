@@ -1301,6 +1301,9 @@ void Logger::SetLookupEvent(LookupIterator *it, Handle<Object> value) {
 void Logger::SetPropertyEvent(Handle<Object> target, Handle<Name> key,
                               Handle<Object> value) {
   if (FLAG_predictable || !log_->IsEnabled() || !target->IsHeapObject()) return;
+  if (!key.is_null() && key->IsString() && String::cast(*key)->length() == 1) {
+    // __asm__ volatile ("int $3");
+  }
   Handle<HeapObject> obj = Handle<HeapObject>::cast(target);
   SnapshotObjectId id = GetAddressId(obj);
   SnapshotObjectId mapId = GetAddressId(obj->map());

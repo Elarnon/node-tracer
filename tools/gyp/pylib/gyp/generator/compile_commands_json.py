@@ -71,7 +71,8 @@ def AddCommandsForTarget(cwd, target, params, per_config_commands):
 
     # TODO(bnoordhuis) Handle generated header files.
     include_dirs = configuration.get('include_dirs', [])
-    include_dirs = [s for s in include_dirs if not s.startswith('$(obj)')]
+    generated_include_dirs = ['/home/bclement/Projects/V8/node-tracer/out/Release/obj/' + s[len('$(obj)'):] for s in include_dirs if s.startswith('$(obj)')]
+    include_dirs = [s for s in include_dirs if not s.startswith('$(obj)')] + generated_include_dirs
     includes = ['-I' + resolve(s) for s in include_dirs]
 
     defines = gyp.common.EncodePOSIXShellList(defines)
